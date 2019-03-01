@@ -16,8 +16,11 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import com.notificationlab.soochak.constants.MessageType;
 import com.notificationlab.soochak.email.Email;
 import com.notificationlab.soochak.email.sender.SoochakMailSenderFactoryService;
+import com.notificationlab.soochak.event.status.EventStatus;
+import com.notificationlab.soochak.event.status.EventStatusService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,9 +32,11 @@ public final class MailProcessingService {
 	private static final AtomicInteger COUNTER = new AtomicInteger(0);
 	
 	private final SoochakMailSenderFactoryService soochakMailSenderFactoryService;
+	private final EventStatusService statusService;
 	
-	public MailProcessingService(SoochakMailSenderFactoryService soochakMailSenderFactoryService){
+	public MailProcessingService(final SoochakMailSenderFactoryService soochakMailSenderFactoryService,final EventStatusService statusService){
 		this.soochakMailSenderFactoryService=soochakMailSenderFactoryService;
+		this.statusService = statusService;
 	}
 	
 	public void process(final MimeMessage emailMessage, final JavaMailSender javaMailSender) {		
@@ -49,7 +54,7 @@ public final class MailProcessingService {
 		}
 		for(Entry<String, URL> entry : cidEntrySet) {
 			InputStreamSource is = ()->entry.getValue().openConnection().getInputStream();
-			int indexOfImgExtension = entry.getKey().lastIndexOf(".");
+			int indexOfImgExtension = entry.getKey().lastIndexOf('.');
 			if(indexOfImgExtension>-1 && indexOfImgExtension<(entry.getKey().length()-1)) {
 				String ext = entry.getKey().substring(indexOfImgExtension+1);
 				helper.addInline(entry.getKey(), is, "image/"+ext);
@@ -69,6 +74,7 @@ public final class MailProcessingService {
 		helper.setSubject(email.getSubject());
 		helper.setText(email.getBody(),true);
 		process(emailMessage, javaMailSender);
+		statusService.updateStatus(email.getEventId(), EventStatus.Status.SENT, MessageType.EMAIL);
 	}
 	
 	public void process(final Email email){

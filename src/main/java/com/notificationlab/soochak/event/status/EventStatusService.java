@@ -29,9 +29,9 @@ public class EventStatusService {
 	}
 	
 	public void createStatus(long eventId) {
-		EventStatus emailStatus = EventStatus.builder().status(EventStatus.Status.PROCESSING).build(); 
-		EventStatus smsStatus = EventStatus.builder().status(EventStatus.Status.PROCESSING).build();
-		EventStatus pnStatus = EventStatus.builder().status(EventStatus.Status.PROCESSING).build();
+		EventStatus emailStatus = EventStatus.builder().status(EventStatus.Status.PENDING).build(); 
+		EventStatus smsStatus = EventStatus.builder().status(EventStatus.Status.PENDING).build();
+		EventStatus pnStatus = EventStatus.builder().status(EventStatus.Status.PENDING).build();
 		EventStatusDto eventStatusDto = EventStatusDto.builder().eventId(eventId).email(emailStatus).pn(pnStatus).sms(smsStatus).build();
 		EventStatusEntity ent = EventStatusEntity.builder().eventId(eventId).status(eventStatusDto).build();
 		saveStatus(ent);
