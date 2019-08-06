@@ -1,22 +1,30 @@
 package com.notificationlab.soochak.segregator;
 
+import java.io.IOException;
 import java.util.Optional;
 
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.notificationlab.soochak.constants.KafkaConstant;
 import com.notificationlab.soochak.constants.MessageType;
 import com.notificationlab.soochak.dto.IMessage;
-import com.notificationlab.soochak.email.Email;
+import com.notificationlab.soochak.dto.Message;
 import com.notificationlab.soochak.event.repository.Event;
 import com.notificationlab.soochak.event.repository.EventRepository;
 import com.notificationlab.soochak.event.status.EventStatus;
 import com.notificationlab.soochak.event.status.EventStatusService;
 import com.notificationlab.soochak.push.MessagePushService;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class MessageSegregatorService {
+	
+	private static final ObjectMapper mapper = new ObjectMapper();
 	
 	private final MessagePushService messagePushService;
 	private final EventRepository eventRepository;
@@ -28,7 +36,23 @@ public class MessageSegregatorService {
 		this.statusService = statusService;
 	}
 	
-	public void segregate(IMessage message) throws JsonProcessingException {
+	@KafkaListener(topics = KafkaConstant.TOPIC_NAME_MESSAGE, groupId = KafkaConstant.GROUPID)
+	public void listenMessageQueue(String message) throws IOException {
+			log.debug("Received Messasge in group " + KafkaConstant.TOPIC_NAME_MESSAGE + " : " + message);
+			Message msgObject = mapper.readValue(message, Message.class);
+			processMessage(msgObject);
+	}
+	
+	private void processMessage(IMessage message) throws JsonProcessingException {
+		log.info("-------------------------Message payload received for processing with id:: "+message.getId()+ " for event :: "+message.getEventId()+"-------------------------");
+		statusService.createStatus(message.getEventId());
+		//MESSAGE SEGREGATOR HERE
+	    segregate(message);
+	    log.info("************************Message Processing done***************************");
+	}
+
+	
+	private void segregate(IMessage message) throws JsonProcessingException {
 		long eventId = message.getEventId();
 		Optional<Event> optionalEvent = eventRepository.findById(eventId);
 		if(optionalEvent.isPresent()) {
@@ -49,14 +73,5 @@ public class MessageSegregatorService {
 				statusService.updateStatus(message.getEventId(), EventStatus.Status.NOTAPPLICABLE, MessageType.PN);
 			}
 		}		
-	}
-	
-	/*
-	 * This method can be used to distribute events
-	 * in priority Qs or respective Organization Qs or retry Qs.
-	 * Currently it simply pushes to single Qs
-	 */
-	public void segregate(Email email) throws JsonProcessingException {
-		messagePushService.push(KafkaConstant.TOPIC_NAME_EMAIL_COMPOSED, email);
 	}
 }

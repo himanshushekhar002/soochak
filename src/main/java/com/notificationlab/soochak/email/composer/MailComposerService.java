@@ -1,5 +1,6 @@
 package com.notificationlab.soochak.email.composer;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
@@ -11,30 +12,67 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import javax.mail.MessagingException;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.notificationlab.soochak.constants.KafkaConstant;
+import com.notificationlab.soochak.constants.MessageType;
 import com.notificationlab.soochak.constants.TemplateType;
 import com.notificationlab.soochak.dto.IMessage;
+import com.notificationlab.soochak.dto.Message;
 import com.notificationlab.soochak.email.Email;
+import com.notificationlab.soochak.email.segregator.ComposedEmailSegregatorService;
 import com.notificationlab.soochak.event.email.EmailEventDetail;
 import com.notificationlab.soochak.event.email.EmailEventDetailRepository;
+import com.notificationlab.soochak.event.status.EventStatus;
+import com.notificationlab.soochak.event.status.EventStatusService;
+import com.notificationlab.soochak.segregator.MessageSegregatorService;
 import com.notificationlab.soochak.template.processor.TemplateProcessor;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class MailComposerService {
 
+	private static final ObjectMapper mapper = new ObjectMapper();
+			
 	private final TemplateProcessor templateProcessor;
 	private final EmailEventDetailRepository repository;
+	private final ComposedEmailSegregatorService segregatorService;
+	private final EventStatusService statusService;
 
-	public MailComposerService(TemplateProcessor templateProcessor, EmailEventDetailRepository repository) {
+	public MailComposerService(TemplateProcessor templateProcessor, EmailEventDetailRepository repository, ComposedEmailSegregatorService segregatorService, EventStatusService statusService) {
 		this.templateProcessor = templateProcessor;
 		this.repository = repository;
+		this.segregatorService = segregatorService;
+		this.statusService = statusService;
+	}
+	
+	@KafkaListener(topics = KafkaConstant.TOPIC_NAME_EMAIL_MESSSAGE, groupId = KafkaConstant.GROUPID)
+	public void listenEmailMessageQueue(String message) throws IOException, MessagingException {
+			log.debug("Received Messasge in group " + KafkaConstant.TOPIC_NAME_EMAIL_MESSSAGE + " : " + message);
+			Message msgObject = mapper.readValue(message, Message.class);
+			composeEmail(msgObject);
+	}
+	
+	private void composeEmail(IMessage message) throws MessagingException, MalformedURLException, JsonProcessingException {
+		log.info("-------------------------Message payload received for composing email with id:: "+message.getId()+ " for event :: "+message.getEventId()+"-------------------------");
+		statusService.updateStatus(message.getEventId(), EventStatus.Status.PROCESSING, MessageType.EMAIL);
+		//MAIL COMPOSER SERVICE
+		Email email = buildEmailDto(message);
+		segregatorService.segregate(email);	
+		log.info("************************Message Email Composing done***************************");
 	}
 
-	public Email composeEmail(IMessage message) throws AddressException, MalformedURLException {
+
+	private Email buildEmailDto(IMessage message) throws AddressException, MalformedURLException {
 		long eventId = message.getEventId();
 		Map<String, Object> data = message.getData();
 		Optional<EmailEventDetail> optionalDetail = repository.findById(eventId);

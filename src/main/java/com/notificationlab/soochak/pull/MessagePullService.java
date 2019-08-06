@@ -28,26 +28,26 @@ public class MessagePullService {
 		this.messageProcessingService = messageProcessingService;
 	}
 
-	@KafkaListener(topics = KafkaConstant.TOPIC_NAME_MESSAGE, groupId = KafkaConstant.GROUPID)
-	public void listenMessageQueue(String message) throws IOException {
-			log.debug("Received Messasge in group " + KafkaConstant.TOPIC_NAME_MESSAGE + " : " + message);
-			Message msgObject = mapper.readValue(message, Message.class);
-			messageProcessingService.processMessage(msgObject);
-	}
+//	@KafkaListener(topics = KafkaConstant.TOPIC_NAME_MESSAGE, groupId = KafkaConstant.GROUPID)
+//	public void listenMessageQueue(String message) throws IOException {
+//			log.debug("Received Messasge in group " + KafkaConstant.TOPIC_NAME_MESSAGE + " : " + message);
+//			Message msgObject = mapper.readValue(message, Message.class);
+//			messageProcessingService.processMessage(msgObject);
+//	}
 
-	@KafkaListener(topics = KafkaConstant.TOPIC_NAME_EMAIL_MESSSAGE, groupId = KafkaConstant.GROUPID)
-	public void listenEmailMessageQueue(String message) throws IOException, MessagingException {
-			log.debug("Received Messasge in group " + KafkaConstant.TOPIC_NAME_EMAIL_MESSSAGE + " : " + message);
-			Message msgObject = mapper.readValue(message, Message.class);
-			messageProcessingService.composeEmail(msgObject);
-	}
+//	@KafkaListener(topics = KafkaConstant.TOPIC_NAME_EMAIL_MESSSAGE, groupId = KafkaConstant.GROUPID)
+//	public void listenEmailMessageQueue(String message) throws IOException, MessagingException {
+//			log.debug("Received Messasge in group " + KafkaConstant.TOPIC_NAME_EMAIL_MESSSAGE + " : " + message);
+//			Message msgObject = mapper.readValue(message, Message.class);
+//			messageProcessingService.composeEmail(msgObject);
+//	}
 
-	@KafkaListener(topics = KafkaConstant.TOPIC_NAME_EMAIL_COMPOSED, groupId = KafkaConstant.GROUPID)
-	public void listenEmailComposedQueue(String message) throws IOException, MessagingException {
-			log.debug("Received Messasge in group " + KafkaConstant.TOPIC_NAME_EMAIL_COMPOSED + " : " + message);
-			Email email = mapper.readValue(message, Email.class);
-			messageProcessingService.processEmail(email);
-	}
+//	@KafkaListener(topics = KafkaConstant.TOPIC_NAME_EMAIL_COMPOSED, groupId = KafkaConstant.GROUPID)
+//	public void listenEmailComposedQueue(String message) throws IOException, MessagingException {
+//			log.debug("Received Messasge in group " + KafkaConstant.TOPIC_NAME_EMAIL_COMPOSED + " : " + message);
+//			Email email = mapper.readValue(message, Email.class);
+//			messageProcessingService.processEmail(email);
+//	}
 
 	@KafkaListener(topics = KafkaConstant.TOPIC_NAME_SMS_MESSAGE, groupId = KafkaConstant.GROUPID)
 	public void listenSMSMessageQueue(String message) throws IOException {
